@@ -28,6 +28,8 @@ type Request struct {
 	BasicAuth *BasicAuth
 	UserAgent string
 	ConnectionTimeout time.Duration
+	Etag string
+	LastModified time.Time
 }
 
 type Session struct {

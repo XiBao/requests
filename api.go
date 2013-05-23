@@ -86,13 +86,13 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
 	}()
 
 	var httpRequest *http.Request
+	if request.Headers == nil {
+		request.Headers = make(map[string]string)
+	}
 	if request.Params == nil {
 		request.Params = &url.Values{}
 		httpRequest, err = http.NewRequest(request.Method, request.Url, nil)
 	}else if request.Method == POST_METHOD {
-		if request.Headers == nil {
-			request.Headers = make(map[string]string)
-		}
 		if len(request.Files) > 0 {
 			body_buf := bytes.NewBufferString("")
 	        body_writer := multipart.NewWriter(body_buf)
@@ -135,6 +135,12 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
 		request.Headers["UserAgent"] = request.UserAgent
 	}
 
+	if request.Etag != "" {
+		request.Headers["If-None-Match"] = request.Etag
+	}
+	if !request.LastModified.IsZero() {
+		request.Headers["If-Modified-Since"] = request.LastModified.Format(http.TimeFormat)
+	}
 	if len(request.Headers) > 0 {
 		for k, v := range request.Headers {
 			httpRequest.Header.Set(k, v)
@@ -174,8 +180,10 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
     		encoding = matched[1]
     	}
     }
-    if encoding == "" {
+    if encoding == "" && len(body) > 0{
     	guess.DetermineEncoding(body, guess.CN)
+    }else{
+    	encoding = "utf-8"
     }
 
     response = &Response{
