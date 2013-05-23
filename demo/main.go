@@ -1,12 +1,3 @@
-# Requests
-
-[https://github.com/XiBao/requests](https://github.com/XiBao/requests)
-
-Go HTTP Requests for Humans™, inspired by [github.com/kennethreitz/requests](https://github.com/kennethreitz/requests)
-
-## Usage
-
-```
 package main
 
 import (
@@ -32,4 +23,3 @@ func main() {
 	}
 	log.Println(res.Header, res.EffectiveUrl, res.Redirects)
 }
-```
