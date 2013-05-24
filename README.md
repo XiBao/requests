@@ -15,12 +15,13 @@ import (
 	"net/url"
 	"time"
 	"net/http"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func testLogin() {
 	session := requests.NewSession()
 	res, err := session.Get(&requests.Request{Url:"http://sem.xibao100.com/user/signin"})
-	log.Println(res.Header, res.EffectiveUrl, res.Redirects)
+	spew.Dump(res.Header, res.EffectiveUrl, res.Redirects)
 	params := &url.Values{}
 	params.Add("uname", "syd")
 	params.Add("passwd", "xxxxxxx")
@@ -32,7 +33,7 @@ func testLogin() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println(res.Header, res.EffectiveUrl, res.Redirects)
+	spew.Dump(res.Header, res.EffectiveUrl, res.Redirects)
 }
 
 func testEtagAndLastModified() {
@@ -43,7 +44,7 @@ func testEtagAndLastModified() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println(res.Header, res.EffectiveUrl)
+	spew.Dump(res.Header, res.EffectiveUrl)
 	lastModified, err := time.Parse(http.TimeFormat, res.Header.Get("Last-Modified"))
 	Etag := res.Header.Get("Etag")
 	request := &requests.Request{
@@ -55,11 +56,21 @@ func testEtagAndLastModified() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println(res.Header, res.EffectiveUrl, res.StatusCode)
+	spew.Dump(res.Header, res.EffectiveUrl, res.StatusCode)
+}
+
+func testFeed() {
+	reqUrl := "http://blog.csdn.net/liigo/rss/list"
+	res, err := requests.Get(&requests.Request{Url:reqUrl})
+	if err != nil {
+		log.Fatalln(err)
+	}
+	spew.Dump(res.Feed())
 }
 
 func main() {
+	testFeed()
 	testEtagAndLastModified()
-	//testLogin()
+	testLogin()
 }
 ```
