@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"io/ioutil"
-	"github.com/salviati/go-guess/guess"
+	//"github.com/salviati/go-guess/guess"
 	"time"
 	"github.com/bububa/cookiejar"
 	"sync"
@@ -51,7 +51,7 @@ func NewSession() *Session {
 		Redirects:make(map[string][]string),
 		MaxRedirect:10,
 	}
-	session.Client.CheckRedirect = session.checkRedirect
+	//session.Client.CheckRedirect = session.CheckRedirect
 	return session
 }
 
@@ -79,6 +79,12 @@ func (this *Session) Head(request *Request) (response *Response, err error) {
 	return this.Do(request)
 }
 
+func (this *Session) SetCookies(cookies []cookiejar.Cookie) {
+	jar := cookiejar.NewJar(true)
+	jar.Add(cookies)
+	this.Client.Jar = jar
+}
+
 func (this *Session) Do(request *Request) (response *Response, err error) {
 	this.Mutex.Lock()
 	defer func() {
@@ -89,10 +95,7 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
 	if request.Headers == nil {
 		request.Headers = make(map[string]string)
 	}
-	if request.Params == nil {
-		request.Params = &url.Values{}
-		httpRequest, err = http.NewRequest(request.Method, request.Url, nil)
-	}else if request.Method == POST_METHOD {
+	if request.Method == POST_METHOD {
 		if len(request.Files) > 0 {
 			body_buf := bytes.NewBufferString("")
 	        body_writer := multipart.NewWriter(body_buf)
@@ -124,6 +127,11 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
 			request.Headers["Content-Type"] = "application/x-www-form-urlencoded"
 			httpRequest, err = http.NewRequest(request.Method, request.Url, strings.NewReader(request.Params.Encode()))
 		}
+	}else{
+		if request.Params == nil {
+			request.Params = &url.Values{}
+		}
+		httpRequest, err = http.NewRequest(request.Method, request.Url, strings.NewReader(request.Params.Encode()))
 	}
 	if err != nil {
 		return nil, err
@@ -153,7 +161,7 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
         }
     }
     startAt := time.Now()
-    transport := &http.Transport { ResponseHeaderTimeout: request.ConnectionTimeout }
+    transport := &http.Transport { }
     if len(this.Proxies) > 0 {
     	proxyUrl, err := GetRandomProxy(this.Proxies)
     	if err == nil {
@@ -171,7 +179,7 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
         return nil, err
     }
 
-    var encoding string
+    encoding := "utf-8"
     contentType := httpResponse.Header.Get("Content-Type")
     if len(contentType) > 0 {
     	pattern := regexp.MustCompile(`charset\=([^;,\r\n]*)`)
@@ -180,11 +188,11 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
     		encoding = matched[1]
     	}
     }
-    if encoding == "" && len(body) > 0{
-    	guess.DetermineEncoding(body, guess.CN)
+    /*if encoding == "" && len(body) > 0{
+    	encoding = guess.DetermineEncoding(body, guess.CN)
     }else{
     	encoding = "utf-8"
-    }
+    }*/
 
     response = &Response{
     	Url: request.Url,
@@ -210,7 +218,7 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
     return response, nil
 }
 
-func (this *Session) checkRedirect(req *http.Request, via []*http.Request) error {
+func (this *Session) CheckRedirect(req *http.Request, via []*http.Request) error {
 	originalUrl := via[0].URL.String()
 	this.Redirects[originalUrl] = append(this.Redirects[originalUrl], req.URL.String())
 	if len(via) >= this.MaxRedirect {
