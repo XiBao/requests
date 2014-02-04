@@ -1,13 +1,13 @@
 package requests
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
-	"github.com/clbanning/x2j"
-	"github.com/sloonz/go-iconv"
-	"strings"
-	"bytes"
+	"github.com/bububa/go-iconv"
+	"github.com/bububa/x2j"
 	"io"
+	"strings"
 )
 
 func (this *Response) Text() string {
