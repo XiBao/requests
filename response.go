@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"github.com/clbanning/x2j"
-	"github.com/sloonz/go-iconv"
+	"github.com/bububa/go-iconv"
 	"io"
 	"strings"
 )
