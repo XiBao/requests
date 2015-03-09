@@ -1,22 +1,22 @@
 package requests
 
 import (
-	"net/url"
-	"net/http"
-	"strings"
 	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strings"
 	//"github.com/salviati/go-guess/guess"
-	"time"
-	"github.com/bububa/cookiejar"
-	"sync"
-	"regexp"
+	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ble/cookiejar"
+	"io"
 	"math/rand"
-	"bytes"
 	"mime/multipart"
 	"os"
-	"io"
+	"regexp"
+	"sync"
+	"time"
 	//"log"
 )
 
@@ -46,10 +46,10 @@ func Head(request *Request) (response *Response, err error) {
 
 func NewSession() *Session {
 	session := &Session{
-		Client:&http.Client{Jar: cookiejar.NewJar(true)},
-		Mutex:new(sync.Mutex),
-		Redirects:make(map[string][]string),
-		MaxRedirect:10,
+		Client:      &http.Client{Jar: cookiejar.NewJar(true)},
+		Mutex:       new(sync.Mutex),
+		Redirects:   make(map[string][]string),
+		MaxRedirect: 10,
 	}
 	//session.Client.CheckRedirect = session.CheckRedirect
 	return session
@@ -98,36 +98,36 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
 	if request.Method == POST_METHOD {
 		if len(request.Files) > 0 {
 			body_buf := bytes.NewBufferString("")
-	        body_writer := multipart.NewWriter(body_buf)
-	        for k, vs := range *request.Params {
-	            for _, v := range vs {
-	            	body_writer.WriteField(k, v)
-	            }
-	        }
-	        for _, formFile := range request.Files {
-	            file_writer, err := body_writer.CreateFormFile(formFile.Name, formFile.Filename)
-	            if err != nil {
-	            	continue
-	            }
-	            if formFile.Data == nil {
-	            	fh, err := os.Open(formFile.Filename)
-		            if err != nil {
-		            	continue
-		            }
-		            io.Copy(file_writer, fh)
-	            }else{
-	            	io.Copy(file_writer, bytes.NewReader(formFile.Data))
-	            }
-	            
-	        }
-	        request.Headers["Content-Type"] = body_writer.FormDataContentType()
-	        body_writer.Close()
-	        httpRequest, err = http.NewRequest(request.Method, request.Url, body_buf)
-		}else{
+			body_writer := multipart.NewWriter(body_buf)
+			for k, vs := range *request.Params {
+				for _, v := range vs {
+					body_writer.WriteField(k, v)
+				}
+			}
+			for _, formFile := range request.Files {
+				file_writer, err := body_writer.CreateFormFile(formFile.Name, formFile.Filename)
+				if err != nil {
+					continue
+				}
+				if formFile.Data == nil {
+					fh, err := os.Open(formFile.Filename)
+					if err != nil {
+						continue
+					}
+					io.Copy(file_writer, fh)
+				} else {
+					io.Copy(file_writer, bytes.NewReader(formFile.Data))
+				}
+
+			}
+			request.Headers["Content-Type"] = body_writer.FormDataContentType()
+			body_writer.Close()
+			httpRequest, err = http.NewRequest(request.Method, request.Url, body_buf)
+		} else {
 			request.Headers["Content-Type"] = "application/x-www-form-urlencoded"
 			httpRequest, err = http.NewRequest(request.Method, request.Url, strings.NewReader(request.Params.Encode()))
 		}
-	}else{
+	} else {
 		if request.Params == nil {
 			request.Params = &url.Values{}
 		}
@@ -156,66 +156,66 @@ func (this *Session) Do(request *Request) (response *Response, err error) {
 	}
 	request.Url = httpRequest.URL.String()
 	if this.Client.Jar != nil {
-        for _, cookie := range this.Client.Jar.Cookies(httpRequest.URL) {
-            httpRequest.AddCookie(cookie)
-        }
-    }
-    startAt := time.Now()
-    transport := &http.Transport { }
-    if len(this.Proxies) > 0 {
-    	proxyUrl, err := GetRandomProxy(this.Proxies)
-    	if err == nil {
-    		transport.Proxy = http.ProxyURL(proxyUrl)
-    	}
-    }
-    this.Client.Transport = transport
-    httpResponse, err := this.Client.Do(httpRequest)
-    if err != nil {
-        return nil, err
-    }
-    defer httpResponse.Body.Close()
-    body, err := ioutil.ReadAll(httpResponse.Body)
-    if err != nil {
-        return nil, err
-    }
+		for _, cookie := range this.Client.Jar.Cookies(httpRequest.URL) {
+			httpRequest.AddCookie(cookie)
+		}
+	}
+	startAt := time.Now()
+	transport := &http.Transport{}
+	if len(this.Proxies) > 0 {
+		proxyUrl, err := GetRandomProxy(this.Proxies)
+		if err == nil {
+			transport.Proxy = http.ProxyURL(proxyUrl)
+		}
+	}
+	this.Client.Transport = transport
+	httpResponse, err := this.Client.Do(httpRequest)
+	if err != nil {
+		return nil, err
+	}
+	defer httpResponse.Body.Close()
+	body, err := ioutil.ReadAll(httpResponse.Body)
+	if err != nil {
+		return nil, err
+	}
 
-    encoding := "utf-8"
-    contentType := httpResponse.Header.Get("Content-Type")
-    if len(contentType) > 0 {
-    	pattern := regexp.MustCompile(`charset\=([^;,\r\n]*)`)
-    	matched := pattern.FindStringSubmatch(contentType)
-    	if len(matched) > 1 {
-    		encoding = matched[1]
-    	}
-    }
-    /*if encoding == "" && len(body) > 0{
-    	encoding = guess.DetermineEncoding(body, guess.CN)
-    }else{
-    	encoding = "utf-8"
-    }*/
+	encoding := "utf-8"
+	contentType := httpResponse.Header.Get("Content-Type")
+	if len(contentType) > 0 {
+		pattern := regexp.MustCompile(`charset\=([^;,\r\n]*)`)
+		matched := pattern.FindStringSubmatch(contentType)
+		if len(matched) > 1 {
+			encoding = matched[1]
+		}
+	}
+	/*if encoding == "" && len(body) > 0{
+	  	encoding = guess.DetermineEncoding(body, guess.CN)
+	  }else{
+	  	encoding = "utf-8"
+	  }*/
 
-    response = &Response{
-    	Url: request.Url,
-    	Encoding: encoding,
-    	Content: body,
-    	Cookies: this.Client.Jar.Cookies(httpRequest.URL),
-    	StartAt: startAt,
-    	Elapsed: time.Now().Sub(startAt),
-    	StatusCode: httpResponse.StatusCode,
-    	Header: httpResponse.Header,
-    }
+	response = &Response{
+		Url:        request.Url,
+		Encoding:   encoding,
+		Content:    body,
+		Cookies:    this.Client.Jar.Cookies(httpRequest.URL),
+		StartAt:    startAt,
+		Elapsed:    time.Now().Sub(startAt),
+		StatusCode: httpResponse.StatusCode,
+		Header:     httpResponse.Header,
+	}
 
-    if eurl := httpResponse.Header.Get("Url"); eurl != "" {
-    	response.EffectiveUrl = eurl
-    }else if redirects, found := this.Redirects[request.Url]; found && len(redirects)>0 {
-    	response.EffectiveUrl = redirects[0]
-    	response.Redirects = redirects
-    	delete(this.Redirects, request.Url)
-    }else {
-    	response.EffectiveUrl = request.Url
-    }
+	if eurl := httpResponse.Header.Get("Url"); eurl != "" {
+		response.EffectiveUrl = eurl
+	} else if redirects, found := this.Redirects[request.Url]; found && len(redirects) > 0 {
+		response.EffectiveUrl = redirects[0]
+		response.Redirects = redirects
+		delete(this.Redirects, request.Url)
+	} else {
+		response.EffectiveUrl = request.Url
+	}
 
-    return response, nil
+	return response, nil
 }
 
 func (this *Session) CheckRedirect(req *http.Request, via []*http.Request) error {
@@ -228,9 +228,11 @@ func (this *Session) CheckRedirect(req *http.Request, via []*http.Request) error
 }
 
 func GetRandomProxy(arr []string) (proxyUrl *url.URL, err error) {
-    idx := rand.Intn(len(arr))
-    proxy := arr[idx]
-    if !strings.HasPrefix(proxy, "http") { proxy = "http://" + proxy }
-    proxyUrl, err = url.Parse(proxy)
-    return
+	idx := rand.Intn(len(arr))
+	proxy := arr[idx]
+	if !strings.HasPrefix(proxy, "http") {
+		proxy = "http://" + proxy
+	}
+	proxyUrl, err = url.Parse(proxy)
+	return
 }
