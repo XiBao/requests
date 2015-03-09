@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
-	"github.com/bububa/go-iconv"
 	"github.com/bububa/x2j"
+	"github.com/sloonz/go-iconv"
 	"io"
 	"strings"
 )
